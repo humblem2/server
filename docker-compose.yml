@@ -1,0 +1,56 @@
+version: '3'
+
+services:
+
+  mysql:
+    image: mysql:latest
+    container_name: prod-mysql-container
+    environment:
+      - MYSQL_DATABASE=stock_example
+      - MYSQL_ROOT_HOST=%
+      - MYSQL_ROOT_PASSWORD=root # FIXME: 보안상. Config 모듈화 주입
+    command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - test_network_02
+
+  redis: # FIXME: docker-compose 빌드 시 redis 접속 안되는 이슈
+    image: redis:latest
+    container_name: prod-redis-container
+    ports:
+      - 6379:6379
+    networks:
+      - test_network_02
+
+  server-app:
+    build: .
+    depends_on:
+      - mysql
+      - redis
+    restart: no
+    ports:
+      - 8080:8080
+    container_name: prod-springboot-container
+    environment:
+       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/stock_example?useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false&allowPublicKeyRetrieval=true     # 확인필요
+       - SPRING_DATASOURCE_USERNAME=root
+       - SPRING_DATASOURCE_PASSWORD=root
+    networks:
+       - test_network_02
+
+#  client_app:
+#    build: .
+#    depends_on:
+#      - server-app
+#    ports:
+#      - 8081:8081
+
+volumes:
+  mysql_data:
+
+networks:
+  test_network_02:
+
